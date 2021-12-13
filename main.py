@@ -34,6 +34,7 @@ class Console(cmd.Cmd):
 
     def do_exit(self, arg):
         print('Bye')
+        exit()
 
 
 
