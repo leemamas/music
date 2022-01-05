@@ -3,7 +3,8 @@ from jsonpath import jsonpath
 from prettytable import PrettyTable
 import cmd
 import os
-
+import time
+import pygame
 
 class Console(cmd.Cmd):
     intro = '''
@@ -28,10 +29,13 @@ class Console(cmd.Cmd):
             console(playlist)
 
             while 1:
-                key = input('choice (1/play 2/collect 3/quit) :')
+                key = input('choice (1/play 2/play with Lyric 3/collect 4/quit) :')
 
                 def play():
                     self.play(playlist)
+
+                def playwithlyric():
+                    self.playwithlyric(playlist)
 
                 def collect():
                     try:
@@ -53,8 +57,9 @@ class Console(cmd.Cmd):
 
                 switch = {
                     '1': play,
-                    '2': collect,
-                    '3': quit
+                    '2': playwithlyric,
+                    '3': collect,
+                    '4': quit
                 }
                 try:
                     switch[key]()
@@ -131,7 +136,6 @@ class Console(cmd.Cmd):
         id = int(key) - 1
         try:
             cmd = 'mpg123\mpg123.exe -q ' + playlist[id]['url'] + ''
-            print('playing....')
             try:
                 os.system(cmd)
                 print('finish...')
@@ -140,10 +144,65 @@ class Console(cmd.Cmd):
         except:
             print('no playlist!')
 
+
+    def playwithlyric(self,playlist):
+        key = input('Enter the ID to play:')
+        id = int(key) - 1
+        try:
+            downloadMusic(playlist[id]['url'])
+            pygame.mixer.init()
+            track = pygame.mixer.music.load('1.mp3')
+            pygame.mixer.music.play()
+            print('playing....【' + playlist[id]['title'] + '】')
+
+            with open("lrc.lrc", "w", encoding='utf-8') as f:
+                f.write(playlist[id]['lrc'])
+            self.printLyric(playlist[id]['lrc'])
+            try:
+                print('finish...')
+            except:
+                print('oh my god!')
+        except:
+            print('no playlist!')
+
+
+
+    def printLyric(self,lrc):
+        # print(lrc)
+        lyricList = []
+        timeTable = []
+        with open('lrc.lrc', 'r', encoding='utf-8') as fread:
+            for line in fread:
+                str = line.split(']')
+                mm = int(str[0][1:3])
+                ss = int(str[0][4:6])
+                SS = int(str[0][7:9])
+                t = mm * 60 + ss + SS * 0.01
+                timeTable.append(t)
+                lyricList.append(str[1])
+        temp=0
+        count=0
+        for t in timeTable:
+            time.sleep(t - temp)
+            temp = t
+            print(lyricList[count],end='')
+            count+=1
+
     def do_exit(self, arg):
         print('Bye')
         exit()
 
+
+def downloadMusic(url):
+    try:
+        res = rq.get(url,stream=True)
+        print('Download Music ing。。。。')
+        with open('1.mp3', 'wb') as fd:
+            for chunk in res.iter_content():
+                fd.write(chunk)
+        print(' Success！')
+    except:
+        print("程序错误")
 
 def craw_music(title, type='netease', page=1):
     url = 'http://www.xmsj.org/'
@@ -168,7 +227,8 @@ def info(json):
             author = jsonpath(json, '$..author')[i]
             link = jsonpath(json, '$..link')[i]
             url1 = jsonpath(json, '$..url')[i]
-            playlist.append({'title': title, 'author': author, 'url': url1})
+            lrc = jsonpath(json, '$..lrc')[i]
+            playlist.append({'title': title, 'author': author, 'url': url1,'lrc':lrc})
             pic = jsonpath(json, '$..pic')[i]
 
         except:
